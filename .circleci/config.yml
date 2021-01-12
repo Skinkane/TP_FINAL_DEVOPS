@@ -41,10 +41,10 @@ jobs:
           name: Launching tests
           command: |
             . venv/bin/activate
-            python3 flask db stamp HEAD
-            python3 flask db migrate
-            python3 flask db upgrade
-            python3 flask test
+            flask db stamp HEAD
+            flask db migrate
+            flask db upgrade
+            flask test
   Heroku:
     docker:
       - image : buildpack-deps:trusty
@@ -70,16 +70,9 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name:  dockerize the app
+          name:  Dockerize the app
           command: |
             docker build --cache-from=app -t app .
-      - persist_to_workspace:
-          root: .
-          paths:
-            - ./image.tar
-      - attach_workspace:
-          at: /tmp/workspace
-      - run: docker load -i /tmp/workspace/image.tar
       - run:
           name: Publish app to docker hub
           command: |
@@ -89,7 +82,7 @@ jobs:
             docker push $DOCKER_HUB_USERNAME/TP_FINAL_DEVOPS:$CIRCLE_BUILD_NUM
             docker push $DOCKER_HUB_USERNAME/TP_FINAL_DEVOPS:latest
 workflows:
-  build_test_deploy:
+  Build_Test_N_Deploy:
     jobs:
       - build
       - test:
