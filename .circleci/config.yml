@@ -8,7 +8,7 @@ jobs:
       - restore_cache:
           key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
       - run:
-          name: Install dependencies in a python venv
+          name: Install dependencies
           command: |
             python3 -m venv venv
             . venv/bin/activate
@@ -43,7 +43,7 @@ jobs:
             . venv/bin/activate
             flask db upgrade
             flask test
-  deploy-heroku:
+  Heroku:
     docker:
       - image : buildpack-deps:trusty
     steps:
@@ -61,7 +61,7 @@ jobs:
               echo "heroku app not responding, failing deploy"
               exit 1
             fi
-  docker-build-push:
+  Docker:
     working_directory: /dockerapp
     docker:
       - image: docker:17.05.0-ce-git
@@ -87,13 +87,13 @@ workflows:
       - test:
           requires:
             - build
-      - deploy-heroku:
+      - Heroku:
           context: Heroku
           requires:
             - build
             # - test
-      - docker-build-push:
+      - Docker:
           context: Docker
           requires:
             - build
-            # - test 
+            # - test
