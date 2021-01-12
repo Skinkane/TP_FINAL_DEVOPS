@@ -8,14 +8,14 @@ jobs:
       - restore_cache:
           key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
       - run:
-          name: Install dependencies in a python venv
+          name: Install dependencies
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install -r requirements/dev.txt            
+            pip install -r requirements/dev.txt
       - save_cache:
           key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
-          paths: 
+          paths:
             - "venv"
   test:
     docker:
@@ -35,17 +35,17 @@ jobs:
       - restore_cache:
           key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
       - run:
-          name: Wait for postgres
+          name: Wait
           command: dockerize -wait tcp://localhost:5432 -timeout 1m
-      - run: 
-          name: running test
+      - run:
+          name: Run tests
           command: |
             . venv/bin/activate
             flask db upgrade
             flask test
   build_docker:
     environment:
-      IMAGE_NAME: sgttabouret/devops-final-back
+      IMAGE_NAME: skinkan/TP_FINAL_DEVOPS
     docker:
       - image: circleci/buildpack-deps:stretch
     steps:
@@ -59,7 +59,7 @@ jobs:
             - ./image.tar
   push_docker:
     environment:
-      IMAGE_NAME: sgttabouret/devops-final-back
+      IMAGE_NAME: skinkan/TP_FINAL_DEVOPS
     docker:
       - image: circleci/buildpack-deps:stretch
     steps:
@@ -70,7 +70,7 @@ jobs:
       - run:
           name: Login and push to DockerHub
           command: |
-            echo "$DOCKERHUB_PASS" | docker login --username skinkan --password-159753
+            echo "$DOCKERHUB_PASS" | docker login --username skinkan --password-Admin159753
             docker tag $IMAGE_NAME:app $IMAGE_NAME:$CIRCLE_BUILD_NUM
             docker tag $IMAGE_NAME:app $IMAGE_NAME:latest
             docker push $IMAGE_NAME:$CIRCLE_BUILD_NUM
@@ -80,7 +80,7 @@ jobs:
       - image: buildpack-deps:trusty
     steps:
       - checkout
-      - run: 
+      - run:
           name: Heroku deploy
           command: |
             git push https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git main
@@ -88,12 +88,12 @@ workflows:
   version: 2
   build-test:
     jobs:
-      - build 
-      # - test:
-      #     context:
-      #       - back_final
-      #     requires: 
-      #       - build
+      - build
+      - test:
+          context:
+           - back_final
+          requires:
+           - build
       - build_docker:
           requires:
             # - test
