@@ -19,7 +19,7 @@ jobs:
             - "venv"
   test:
     docker:
-      - image: circleci/python:3.9-buster-node-browsers
+       image: circleci/python:3.7.9-stretch-browsers
         environment:
           DATABASE_URL: postgresql://myUsr:somePwd@localhost:5432/psdb
           FLASK_APP: autoapp.py
@@ -64,7 +64,7 @@ jobs:
   Docker:
     working_directory: /dockerapp
     docker:
-      - image: docker:17.05.0-ce-git
+      - image: circleci/buildpack-deps:stretch
     steps:
       - checkout
       - setup_remote_docker
