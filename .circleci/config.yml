@@ -62,7 +62,6 @@ jobs:
               exit 1
             fi
   Docker:
-    working_directory: /dockerapp
     docker:
       - image: circleci/buildpack-deps:stretch
     steps:
@@ -72,14 +71,21 @@ jobs:
           name:  dockerize the app
           command: |
             docker build --cache-from=app -t app .
+      - persist_to_workspace:
+          root: .
+          paths:
+            - ./image.tar
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: docker load -i /tmp/workspace/image.tar
       - run:
           name: Publish app to docker hub
           command: |
             docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
-            docker tag app $DOCKER_HUB_USERNAME/tp-devops-final-api:$CIRCLE_BUILD_NUM
-            docker tag app $DOCKER_HUB_USERNAME/tp-devops-final-api:latest
-            docker push $DOCKER_HUB_USERNAME/tp-devops-final-api:$CIRCLE_BUILD_NUM
-            docker push $DOCKER_HUB_USERNAME/tp-devops-final-api:latest
+            docker tag app $DOCKER_HUB_USERNAME/TP_FINAL_DEVOPS:$CIRCLE_BUILD_NUM
+            docker tag app $DOCKER_HUB_USERNAME/TP_FINAL_DEVOPS:latest
+            docker push $DOCKER_HUB_USERNAME/TP_FINAL_DEVOPS:$CIRCLE_BUILD_NUM
+            docker push $DOCKER_HUB_USERNAME/TP_FINAL_DEVOPS:latest
 workflows:
   build_test_deploy:
     jobs:
