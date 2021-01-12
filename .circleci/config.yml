@@ -1,121 +1,99 @@
-version: 2
+version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/python:3.7.9-stretch-browsers
+      - image: circleci/python:3.7.9-buster-node-browsers
     steps:
       - checkout
       - restore_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
+          key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
       - run:
-          name: Install dependencies
+          name: Install dependencies in a python venv
           command: |
             python3 -m venv venv
             . venv/bin/activate
             pip install -r requirements/dev.txt
       - save_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
+          key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
           paths:
             - "venv"
   test:
     docker:
-      - image: circleci/python:3.7.9-stretch-browsers
+      - image: circleci/python:3.9-buster-node-browsers
         environment:
+          DATABASE_URL: postgresql://myUsr:somePwd@localhost:5432/psdb
           FLASK_APP: autoapp.py
-          CONDUIT_SECRET: $CONDUIT_SECRET
+          CONDUIT_SECRET: 'something-really-secret'
           FLASK_DEBUG: 1
-          DATABASE_URL: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB
-      - image: circleci/postgres:9.5.19-alpine
+      - image: circleci/postgres:9.6.2-alpine
         environment:
-          POSTGRES_USER: $POSTGRES_USER
-          POSTGRES_DB: $POSTGRES_DB
-          POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+          POSTGRES_USER: myUsr
+          POSTGRES_DB: psdb
+          POSTGRES_PASSWORD: somePwd
     steps:
       - checkout
       - restore_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
+          key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
       - run:
-          name: Wait
-          command: dockerize -wait tcp://localhost:5432 -timeout 1m
+          name: Waiting for postgresql
+          command : dockerize -wait tcp://localhost:5432 -timeout 1m
       - run:
-          name: Run tests
+          name: Launching tests
           command: |
             . venv/bin/activate
             flask db upgrade
             flask test
-  build_docker:
-    environment:
-      IMAGE_NAME: skinkan/TP_FINAL_DEVOPS
+  deploy-heroku:
     docker:
-      - image: circleci/buildpack-deps:stretch
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run: docker image build --tag $IMAGE_NAME:app .
-      - run: docker save -o image.tar $IMAGE_NAME
-      - persist_to_workspace:
-          root: .
-          paths:
-            - ./image.tar
-  push_docker:
-    environment:
-      IMAGE_NAME: skinkan/TP_FINAL_DEVOPS
-    docker:
-      - image: circleci/buildpack-deps:stretch
-    steps:
-      - attach_workspace:
-          at: /tmp/workspace
-      - setup_remote_docker
-      - run: docker load -i /tmp/workspace/image.tar
-      - run:
-          name: Login and push to DockerHub
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login --username skinkan --password-Admin159753
-            docker tag $IMAGE_NAME:app $IMAGE_NAME:$CIRCLE_BUILD_NUM
-            docker tag $IMAGE_NAME:app $IMAGE_NAME:latest
-            docker push $IMAGE_NAME:$CIRCLE_BUILD_NUM
-            docker push $IMAGE_NAME:latest
-  deploy_heroku:
-    docker:
-      - image: buildpack-deps:trusty
+      - image : buildpack-deps:trusty
     steps:
       - checkout
       - run:
-          name: Heroku deploy
+          name: Deploy main to heroku
           command: |
+            git config --global push.default matching
             git push https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git main
+      - run:
+          name: Smoke test
+          command: |
+            HTTPCODE=`curl -s -o /dev/null -w "%{http_code}" https://$HEROKU_APP_NAME.herokuapp.com/api/articles`
+            if [ "$HTTPCODE" -ne 200 ];then
+              echo "heroku app not responding, failing deploy"
+              exit 1
+            fi
+  docker-build-push:
+    working_directory: /dockerapp
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name:  dockerize the app
+          command: |
+            docker build --cache-from=app -t app .
+      - run:
+          name: Publish app to docker hub
+          command: |
+            docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
+            docker tag app $DOCKER_HUB_USERNAME/tp-devops-final-api:$CIRCLE_BUILD_NUM
+            docker tag app $DOCKER_HUB_USERNAME/tp-devops-final-api:latest
+            docker push $DOCKER_HUB_USERNAME/tp-devops-final-api:$CIRCLE_BUILD_NUM
+            docker push $DOCKER_HUB_USERNAME/tp-devops-final-api:latest
 workflows:
-  version: 2
-  build-test:
+  build_test_deploy:
     jobs:
       - build
       - test:
-          context:
-           - back_final
           requires:
-           - build
-      - build_docker:
-          requires:
-            # - test
             - build
-          context:
-            - back_final
-      - push_docker:
+      - deploy-heroku:
+          context: Heroku
           requires:
-            - build_docker
-          context:
-            - back_final
-          filters:
-            branches:
-              only:
-                - main
-      - deploy_heroku:
-          requires:
-            # - test
             - build
-          context:
-            - back_final
-          filters:
-            branches:
-              only:
-                - main
+            # - test
+      - docker-build-push:
+          context: Docker
+          requires:
+            - build
+            # - test 
