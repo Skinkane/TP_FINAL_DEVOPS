@@ -1,6 +1,6 @@
 version: 2.1
 jobs:
-  build:
+  Build:
     docker:
       - image: circleci/python:3.9-buster-node-browsers
     steps:
@@ -17,7 +17,7 @@ jobs:
           key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
           paths:
             - "venv"
-  test:
+  Test:
     docker:
       - image: circleci/python:3.9-buster-node-browsers
         environment:
@@ -70,11 +70,11 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name:  Dockerize the app
+          name:  Dockerize
           command: |
             docker build --cache-from=app -t app .
       - run:
-          name: Publish app to docker hub
+          name: Publish to DockerHub
           command: |
             docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
             docker tag app $DOCKER_HUB_USERNAME/tp_final_devops:$CIRCLE_BUILD_NUM
@@ -84,17 +84,15 @@ jobs:
 workflows:
   Build_Test_N_Deploy:
     jobs:
-      - build
-      - test:
+      - Build
+      - Test:
           requires:
-            - build
+            - Build
       - Heroku:
           context: Heroku
           requires:
-            - build
-            # - test
+            - Build
       - Docker:
           context: Docker
           requires:
-            - build
-            # - test
+            - Build
