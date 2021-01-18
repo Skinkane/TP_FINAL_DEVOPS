@@ -24,7 +24,7 @@ jobs:
           DATABASE_URL: postgresql://myUsr:somePwd@localhost:5432/psdb
           FLASK_APP: autoapp.py
           CONDUIT_SECRET: 'something-really-secret'
-          FLASK_DEBUG: 1
+          FLASK_DEBUG: 0
       - image: circleci/postgres:9.6.2-alpine
         environment:
           POSTGRES_USER: myUsr
