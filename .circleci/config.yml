@@ -62,7 +62,6 @@ jobs:
               exit 1
             fi
   Docker:
-    working_directory: /dockerapp
     docker:
       - image: circleci/buildpack-deps:stretch
     steps:
