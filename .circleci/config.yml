@@ -24,7 +24,7 @@ jobs:
           DATABASE_URL: postgresql://myUsr:somePwd@localhost:5432/psdb
           FLASK_APP: autoapp.py
           CONDUIT_SECRET: 'something-really-secret'
-          FLASK_DEBUG: 0
+          FLASK_DEBUG: 1
       - image: circleci/postgres:9.6.2-alpine
         environment:
           POSTGRES_USER: myUsr
@@ -41,10 +41,8 @@ jobs:
           name: Tests
           command: |
             . venv/bin/activate
-            flask db stamp HEAD
-            flask db migrate
-            flask db upgrade
-            flask test
+            python -m flask db upgrade
+            python -m flask test
   Heroku:
     docker:
       - image : buildpack-deps:trusty
@@ -85,9 +83,9 @@ workflows:
   Build_Test_N_Deploy:
     jobs:
       - Build
-      # - Test:  (Not working atm)
-      #     requires:
-      #       - Build
+      - Test: 
+          requires:
+            - Build
       - Heroku:
           context: Heroku
           requires:
