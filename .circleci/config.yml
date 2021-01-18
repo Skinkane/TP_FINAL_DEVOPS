@@ -84,9 +84,9 @@ workflows:
   Build_Test_N_Deploy:
     jobs:
       - Build
-      - Test: 
-          requires:
-            - Build
+      # - Test: 
+          # requires:
+            # - Build
       - Heroku:
           context: Heroku
           requires:
