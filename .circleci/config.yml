@@ -90,7 +90,7 @@ workflows:
       - Heroku:
           context: Heroku
           requires:
-            - Build
+            - Docker
       - Docker:
           context: Docker
           requires:
