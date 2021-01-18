@@ -8,17 +8,17 @@ jobs:
       - restore_cache:
           key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
       - run:
-          name: Install dependencies
+          name: Install dependencies in a python venv
           command: |
             python3 -m venv venv
             . venv/bin/activate
             pip install -r requirements/dev.txt
       - save_cache:
           key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
-          paths:
+          paths: 
             - "venv"
   Test:
-    docker:
+    docker: 
       - image: circleci/python:3.9-buster-node-browsers
         environment:
           DATABASE_URL: postgresql://myUsr:somePwd@localhost:5432/psdb
@@ -34,17 +34,17 @@ jobs:
       - checkout
       - restore_cache:
           key: deps-{{ checksum "requirements/dev.txt"}}-{{ .Environment.CACHE_VERSION }}
-      - run:
+      - run: 
           name: Waiting for postgresql
           command : dockerize -wait tcp://localhost:5432 -timeout 1m
-      - run:
-          name: Tests
+      - run: 
+          name: Launching tests
           command: |
             . venv/bin/activate
-            python -m flask db upgrade
-            python -m flask test
+            flask db upgrade
+            flask test
   Heroku:
-    docker:
+    docker: 
       - image : buildpack-deps:trusty
     steps:
       - checkout
@@ -62,8 +62,9 @@ jobs:
               exit 1
             fi
   Docker:
+    working_directory: /dockerapp
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: docker:17.05.0-ce-git
     steps:
       - checkout
       - setup_remote_docker
@@ -71,14 +72,14 @@ jobs:
           name:  Dockerize
           command: |
             docker build --cache-from=app -t app .
-      - run:
-          name: Publish to DockerHub
+      - run: 
+          name: Publish app to docker hub
           command: |
             docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
-            docker tag app $DOCKER_HUB_USERNAME/tp_final_devops:$CIRCLE_BUILD_NUM
-            docker tag app $DOCKER_HUB_USERNAME/tp_final_devops:latest
-            docker push $DOCKER_HUB_USERNAME/tp_final_devops:$CIRCLE_BUILD_NUM
-            docker push $DOCKER_HUB_USERNAME/tp_final_devops:latest
+            docker tag app $DOCKER_HUB_USERNAME/tp-devops-final-api:$CIRCLE_BUILD_NUM
+            docker tag app $DOCKER_HUB_USERNAME/tp-devops-final-api:latest
+            docker push $DOCKER_HUB_USERNAME/tp-devops-final-api:$CIRCLE_BUILD_NUM
+            docker push $DOCKER_HUB_USERNAME/tp-devops-final-api:latest
 workflows:
   Build_Test_N_Deploy:
     jobs:
